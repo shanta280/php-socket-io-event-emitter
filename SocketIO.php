@@ -281,8 +281,33 @@ class SocketIO
 
         });
 
-        $fd = fsockopen("{$this->protocole}{$this->host}", $this->port, $errno, $errstr);
+        // if condition modified by me
+        if(in_array($this->protocole, [SocketIO::SSL_PROTOCOLE, SocketIO::TLS_PROTOCOLE])) 
+        {
+            // refer http://php.net/manual/en/context.ssl.php 
+            $context = stream_context_create([
+                "ssl" => [
+                    'verify_peer'   => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true,
+                    //'cafile'        => __DIR__ . '/cacert.pem',
+                    'verify_depth'  => 5,
+                ],
+            ]);
+            
+            $fd = stream_socket_client(
+                "{$this->protocole}{$this->host}:{$this->port}",
+                $errno,
+                $errstr,
+                30,
+                STREAM_CLIENT_CONNECT,
+                $context);
 
+        } else {
+            $fd = fsockopen("{$this->protocole}{$this->host}", $this->port, $errno, $errstr);
+        }
+        // end me
+        
         if (!$fd) {
             restore_error_handler();
             return false;
